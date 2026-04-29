@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI웹융합 — 학생 프로젝트 전시관</title>
+<meta name="description" content="2026 AI웹융합 학생 프로젝트 모음">
+<style>
+:root {
+  --bg: oklch(98% 0.005 90);
+  --surface: oklch(100% 0 0);
+  --ink: oklch(20% 0.02 90);
+  --ink-soft: oklch(45% 0.02 90);
+  --ink-muted: oklch(70% 0.01 90);
+  --accent: oklch(55% 0.18 250);
+  --accent-soft: oklch(95% 0.04 250);
+  --live: oklch(65% 0.18 145);
+  --down: oklch(60% 0.01 90);
+  --rule: oklch(90% 0.005 90);
+  --grid: oklch(95% 0.005 90);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI", Roboto, sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  line-height: 1.6;
+  background-image:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px);
+  background-size: 64px 64px;
+  background-position: -1px -1px;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+.container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 clamp(1.5rem, 4vw, 4rem);
+}
+
+/* ============ Hero ============ */
+.hero {
+  padding: clamp(4rem, 10vw, 8rem) 0 clamp(2rem, 5vw, 4rem);
+  border-bottom: 1px solid var(--rule);
+}
+
+.kicker {
+  font-size: 0.8125rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 1.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-weight: 500;
+}
+.kicker::before {
+  content: '';
+  width: 2.5rem;
+  height: 1px;
+  background: currentColor;
+}
+
+h1 {
+  font-size: clamp(2.5rem, 7vw, 6rem);
+  font-weight: 800;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  margin-bottom: 2rem;
+}
+h1 em {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--accent) 0%, oklch(60% 0.2 290) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.lede {
+  font-size: clamp(1.0625rem, 1.4vw, 1.25rem);
+  max-width: 40rem;
+  color: var(--ink-soft);
+  line-height: 1.55;
+}
+
+.meta-bar {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1.5rem 2.5rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px dashed var(--rule);
+  font-size: 0.875rem;
+}
+.meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+.meta-label {
+  color: var(--ink-muted);
+  font-size: 0.6875rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+.meta-value {
+  font-weight: 700;
+  color: var(--ink);
+  font-size: 1.125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ============ Section ============ */
+.section {
+  padding: clamp(3rem, 6vw, 5rem) 0;
+}
+
+.section-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 2.5rem;
+  flex-wrap: wrap;
+}
+.section-title {
+  font-size: clamp(1.5rem, 2.5vw, 2.125rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  display: flex;
+  align-items: baseline;
+  gap: 0.875rem;
+}
+.section-title small {
+  font-size: 0.75em;
+  color: var(--ink-muted);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.legend {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.recheck {
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.recheck:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+.recheck svg {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.4s;
+}
+.recheck:hover svg { transform: rotate(180deg); }
+
+/* ============ Grid ============ */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr));
+  gap: 1.25rem;
+}
+
+/* ============ Card ============ */
+.card {
+  position: relative;
+  background: var(--surface);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 1.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  text-decoration: none;
+  color: inherit;
+  transition:
+    transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 0.3s,
+    box-shadow 0.3s;
+  isolation: isolate;
+  overflow: hidden;
+  min-height: 200px;
+}
+
+.card::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent), oklch(70% 0.18 290));
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.card[data-status="live"] { cursor: pointer; }
+.card[data-status="live"]:hover {
+  transform: translateY(-4px);
+  border-color: oklch(75% 0.08 250);
+  box-shadow: 0 16px 36px -16px oklch(20% 0.05 250 / 0.18);
+}
+.card[data-status="live"]:hover::after { transform: scaleX(1); }
+
+.card[data-status="down"] {
+  cursor: not-allowed;
+  pointer-events: none;
+  opacity: 0.5;
+  filter: grayscale(0.85);
+}
+
+.card[data-status="checking"] {
+  pointer-events: none;
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.card-num {
+  font-size: 0.6875rem;
+  color: var(--ink-muted);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+  font-weight: 600;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+.status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ink-muted);
+  position: relative;
+}
+[data-status="live"] .status-dot {
+  background: var(--live);
+  animation: pulse 2.4s ease-out infinite;
+}
+[data-status="down"] .status-dot { background: var(--down); }
+[data-status="checking"] .status-dot {
+  background: var(--accent);
+  animation: pulse-fast 1.2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 0 oklch(65% 0.18 145 / 0.5); }
+  100% { box-shadow: 0 0 0 8px oklch(65% 0.18 145 / 0); }
+}
+@keyframes pulse-fast {
+  0%, 100% { opacity: 0.5; }
+  50% { opacity: 1; }
+}
+
+.card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.card-name {
+  font-size: 2.25rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-family: 'JetBrains Mono', ui-monospace, "SF Mono", Menlo, monospace;
+  font-feature-settings: "ss01", "tnum";
+  transition: font-size 0.3s ease, font-family 0.3s ease;
+}
+.card-name--title {
+  font-size: 1.375rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+  line-height: 1.3;
+  font-family: inherit;
+  font-feature-settings: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: keep-all;
+}
+
+.card-desc {
+  font-size: 0.9375rem;
+  color: var(--ink-soft);
+  line-height: 1.5;
+}
+
+.card-foot {
+  margin-top: auto;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  font-size: 0.8125rem;
+}
+.card-domain {
+  color: var(--ink-soft);
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.75rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: -0.01em;
+}
+.card-arrow {
+  color: var(--ink-muted);
+  transition: transform 0.3s, color 0.3s;
+  font-size: 1.125rem;
+  line-height: 1;
+}
+.card[data-status="live"]:hover .card-arrow {
+  transform: translateX(4px);
+  color: var(--accent);
+}
+
+/* ============ Empty / Footer ============ */
+.empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--ink-muted);
+  border: 1px dashed var(--rule);
+  border-radius: 12px;
+  font-size: 0.9375rem;
+}
+
+footer {
+  border-top: 1px solid var(--rule);
+  padding: 2.5rem 0 4rem;
+  margin-top: 3rem;
+  font-size: 0.8125rem;
+  color: var(--ink-muted);
+  display: flex;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+@media (max-width: 640px) {
+  body { background-size: 32px 32px; }
+  .legend { gap: 1rem; }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: oklch(15% 0.01 250);
+    --surface: oklch(20% 0.012 250);
+    --ink: oklch(96% 0.005 90);
+    --ink-soft: oklch(70% 0.015 250);
+    --ink-muted: oklch(50% 0.015 250);
+    --accent: oklch(72% 0.16 250);
+    --accent-soft: oklch(25% 0.04 250);
+    --live: oklch(72% 0.18 145);
+    --down: oklch(40% 0.01 90);
+    --rule: oklch(28% 0.012 250);
+    --grid: oklch(19% 0.012 250);
+  }
+  .card[data-status="live"]:hover {
+    box-shadow: 0 16px 36px -16px oklch(0% 0 0 / 0.5);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <header class="hero">
+    <p class="kicker">2026 · AI웹융합</p>
+    <h1>학생 프로젝트<br><em>전시관</em></h1>
+    <p class="lede">
+      각 학생에게 배정된 서브도메인입니다. 카드를 눌러 사이트로 이동하세요.
+      배포되지 않은 사이트는 자동으로 회색 비활성 처리되며, 페이지 진입 시 상태를 실시간으로 점검합니다.
+    </p>
+    <div class="meta-bar">
+      <div class="meta-item">
+        <span class="meta-label">Course</span>
+        <span class="meta-value">AI웹융합</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Total</span>
+        <span class="meta-value" id="totalCount">—</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Live</span>
+        <span class="meta-value" id="liveCount">—</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">Last Check</span>
+        <span class="meta-value" id="updateTime">—</span>
+      </div>
+    </div>
+  </header>
+
+  <section class="section">
+    <div class="section-header">
+      <h2 class="section-title">학생 페이지 <small id="subTitle"></small></h2>
+      <div style="display: flex; gap: 1.25rem; align-items: center; flex-wrap: wrap;">
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot" style="background: var(--live)"></span>접속 가능</span>
+          <span class="legend-item"><span class="legend-dot" style="background: var(--down)"></span>오프라인</span>
+        </div>
+        <button class="recheck" id="recheckBtn" type="button">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
+          다시 확인
+        </button>
+      </div>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <footer>
+    <span>© 2026 AI웹융합 · 학생 프로젝트 전시관</span>
+    <span>Hosted on Cloudflare Pages</span>
+  </footer>
+
+</div>
+
+<script>
+// ============================================
+//  설정
+// ============================================
+// 메타데이터(타이틀) 추출 엔드포인트
+//   - "/api/meta": 같은 Pages 프로젝트의 Function 사용 (functions/api/meta.js) — 권장
+//   - "https://...workers.dev": 별도 Worker로 배포한 경우
+//   - "" (빈 문자열): 비활성화 — 슬롯 코드(s01)만 표시
+const META_PROXY = "/api/meta";
+
+// ============================================
+//  학생 데이터 — 여기만 수정하면 됩니다
+//  배정 도메인: sNN.aiweb2026.site
+//  학생 사이트가 아직 배포되지 않았으면 자동으로 회색 비활성 처리됩니다
+// ============================================
+const STUDENTS = [
+  { name: "예시",   desc: "데모 페이지 — 학생 사이트는 이렇게 보입니다", url: "https://example.aiweb2026.site" },
+  { name: "심인규", url: "https://s01.aiweb2026.site" },
+  { name: "구동빈", url: "https://s02.aiweb2026.site" },
+  { name: "김민결", url: "https://s03.aiweb2026.site" },
+  { name: "오승은", url: "https://s04.aiweb2026.site" },
+  { name: "정서현", url: "https://s05.aiweb2026.site" },
+  { name: "김범준", url: "https://s06.aiweb2026.site" },
+  { name: "한정연", url: "https://s07.aiweb2026.site" },
+  { name: "김수정", url: "https://s08.aiweb2026.site" },
+  { name: "김유진", url: "https://s09.aiweb2026.site" },
+  { name: "이문규", url: "https://s10.aiweb2026.site" },
+  { name: "최영우", url: "https://s11.aiweb2026.site" },
+  { name: "차성준", url: "https://s12.aiweb2026.site" },
+  { name: "심기준", url: "https://s13.aiweb2026.site" },
+  { name: "윤준영", url: "https://s14.aiweb2026.site" },
+  { name: "이유민", url: "https://s15.aiweb2026.site" },
+  { name: "전종찬", url: "https://s16.aiweb2026.site" },
+  { name: "여민영", url: "https://s17.aiweb2026.site" },
+  { name: "유휘경", url: "https://s18.aiweb2026.site" },
+  { name: "박희태", url: "https://s19.aiweb2026.site" },
+  { name: "박성현", url: "https://s20.aiweb2026.site" },
+  { name: "백송희", url: "https://s21.aiweb2026.site" },
+  { name: "김형중", url: "https://s22.aiweb2026.site" },
+  { name: "김수진", url: "https://s23.aiweb2026.site" },
+  { name: "전성민", url: "https://s24.aiweb2026.site" },
+  { name: "이정수", url: "https://s25.aiweb2026.site" },
+  { name: "김지우", url: "https://s26.aiweb2026.site" },
+  { name: "채혜원", url: "https://s27.aiweb2026.site" },
+];
+// ============================================
+
+const grid = document.getElementById('grid');
+const totalEl = document.getElementById('totalCount');
+const liveEl = document.getElementById('liveCount');
+const updateEl = document.getElementById('updateTime');
+const subTitleEl = document.getElementById('subTitle');
+const recheckBtn = document.getElementById('recheckBtn');
+
+function getDomain(url) {
+  try { return new URL(url).hostname.replace(/^www\./, ''); }
+  catch { return url; }
+}
+
+function escapeHtml(str) {
+  return String(str).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function getSlot(url) {
+  try { return new URL(url).hostname.split('.')[0]; }
+  catch { return ''; }
+}
+
+function renderCards() {
+  if (STUDENTS.length === 0) {
+    grid.innerHTML = `<div class="empty">아직 등록된 프로젝트가 없습니다.</div>`;
+    return;
+  }
+  grid.innerHTML = STUDENTS.map((s, i) => {
+    const slot = getSlot(s.url);
+    return `
+    <a class="card" data-status="checking" data-url="${escapeHtml(s.url)}"
+       href="${escapeHtml(s.url)}" target="_blank" rel="noopener noreferrer"
+       title="${escapeHtml(s.name)}"
+       aria-busy="true">
+      <div class="card-header">
+        <span class="card-num">${String(i + 1).padStart(2, '0')} / ${String(STUDENTS.length).padStart(2, '0')}</span>
+        <span class="status">
+          <span class="status-dot" aria-hidden="true"></span>
+          <span class="status-text">확인 중</span>
+        </span>
+      </div>
+      <div class="card-body">
+        <div class="card-name">${escapeHtml(slot)}</div>
+        ${s.desc ? `<div class="card-desc">${escapeHtml(s.desc)}</div>` : ''}
+      </div>
+      <div class="card-foot">
+        <span class="card-domain">${escapeHtml(getDomain(s.url))}</span>
+        <span class="card-arrow" aria-hidden="true">→</span>
+      </div>
+    </a>
+  `;}).join('');
+}
+
+async function fetchMeta(url, timeoutMs = 10000) {
+  // META_PROXY가 없으면 단순 liveness 체크만
+  if (!META_PROXY) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    try {
+      await fetch(url, {
+        mode: 'no-cors',
+        cache: 'no-store',
+        redirect: 'follow',
+        signal: controller.signal,
+      });
+      return { ok: true, title: null };
+    } catch {
+      return { ok: false, title: null };
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Worker 프록시를 통해 title까지 추출
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const sep = META_PROXY.includes('?') ? '&' : '?';
+    const proxyUrl = `${META_PROXY}${sep}url=${encodeURIComponent(url)}`;
+    const res = await fetch(proxyUrl, { signal: controller.signal });
+    if (!res.ok) return { ok: false, title: null };
+    const data = await res.json();
+    return { ok: !!data.ok, title: data.title || null };
+  } catch {
+    return { ok: false, title: null };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+async function runChecks() {
+  const cards = document.querySelectorAll('.card');
+  cards.forEach(c => {
+    c.dataset.status = 'checking';
+    c.setAttribute('aria-busy', 'true');
+    const txt = c.querySelector('.status-text');
+    if (txt) txt.textContent = '확인 중';
+  });
+  liveEl.textContent = '—';
+  updateEl.textContent = '확인 중…';
+
+  let live = 0;
+  await Promise.all(Array.from(cards).map(async card => {
+    const url = card.dataset.url;
+    const meta = await fetchMeta(url);
+    const ok = meta.ok;
+    card.dataset.status = ok ? 'live' : 'down';
+    card.setAttribute('aria-busy', 'false');
+
+    const statusText = card.querySelector('.status-text');
+    if (statusText) statusText.textContent = ok ? 'Live' : 'Offline';
+
+    // 타이틀이 잡히면 카드 라벨을 슬롯 → 실제 페이지 제목으로 교체
+    if (ok && meta.title) {
+      const nameEl = card.querySelector('.card-name');
+      if (nameEl) {
+        nameEl.textContent = meta.title;
+        nameEl.classList.add('card-name--title');
+      }
+    }
+
+    if (ok) {
+      live += 1;
+    } else {
+      card.removeAttribute('href');
+      card.setAttribute('aria-disabled', 'true');
+    }
+    liveEl.textContent = live;
+  }));
+
+  updateEl.textContent = new Date().toLocaleTimeString('ko-KR', {
+    hour: '2-digit', minute: '2-digit'
+  });
+}
+
+// 초기화
+renderCards();
+totalEl.textContent = STUDENTS.length;
+subTitleEl.textContent = `${STUDENTS.length}개`;
+runChecks();
+
+function resetCards() {
+  document.querySelectorAll('.card').forEach((c, i) => {
+    const s = STUDENTS[i];
+    if (!s) return;
+    c.setAttribute('href', s.url);
+    c.removeAttribute('aria-disabled');
+    // 라벨을 다시 슬롯 코드로 되돌림 (재확인 시 깜빡 후 새 타이틀로 교체)
+    const nameEl = c.querySelector('.card-name');
+    if (nameEl) {
+      nameEl.textContent = getSlot(s.url);
+      nameEl.classList.remove('card-name--title');
+    }
+  });
+}
+
+// 버튼: 다시 확인
+recheckBtn.addEventListener('click', () => {
+  resetCards();
+  runChecks();
+});
+
+// 5분마다 자동 재확인
+setInterval(() => {
+  resetCards();
+  runChecks();
+}, 5 * 60 * 1000);
+</script>
+
+</body>
+</html>
