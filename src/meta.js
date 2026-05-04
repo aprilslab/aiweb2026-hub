@@ -1,7 +1,5 @@
 /**
- * Cloudflare Pages Function — 학생 페이지 메타데이터 추출 프록시
- *
- * 자동 라우팅: 이 파일은 배포 시 /api/meta 엔드포인트로 자동 매핑됩니다.
+ * 학생 페이지 메타데이터 추출 프록시 — Worker 핸들러
  *
  * 사용:
  *   GET /api/meta?url=https://s01.aiweb2026.site
@@ -9,11 +7,24 @@
  * 반환:
  *   { ok: true, status: 200, title: "심인규의 포트폴리오", description: "..." }
  *   { ok: false, error: "fetch failed" }
- *
- * 배포: index.html과 함께 git에 push하면 Cloudflare Pages가 알아서 배포합니다.
  */
 
-export async function onRequestGet({ request }) {
+const ALLOWED = /(^|\.)aiweb2026\.site$|\.pages\.dev$|\.workers\.dev$/i;
+
+export async function handleMeta(request) {
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, OPTIONS',
+      },
+    });
+  }
+
+  if (request.method !== 'GET') {
+    return jsonResponse({ error: 'method not allowed' }, 405);
+  }
+
   const target = new URL(request.url).searchParams.get('url');
 
   if (!target) {
@@ -28,7 +39,6 @@ export async function onRequestGet({ request }) {
   }
 
   // 화이트리스트 — 임의의 외부 사이트 프록시 방지
-  const ALLOWED = /(^|\.)aiweb2026\.site$|\.pages\.dev$|\.workers\.dev$/i;
   if (!ALLOWED.test(parsed.hostname)) {
     return jsonResponse({ error: 'host not allowed' }, 403);
   }
@@ -71,16 +81,6 @@ export async function onRequestGet({ request }) {
       { 'Cache-Control': 'public, max-age=30' }
     );
   }
-}
-
-// CORS preflight — 같은 origin이라 필수는 아니지만 안전하게 처리
-export async function onRequestOptions() {
-  return new Response(null, {
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'GET, OPTIONS',
-    },
-  });
 }
 
 function jsonResponse(data, status = 200, extraHeaders = {}) {

@@ -2,12 +2,12 @@
   "name": "aiweb2026-hub",
   "version": "0.1.0",
   "private": true,
-  "description": "AI웹융합 학생 프로젝트 전시관 — Cloudflare Pages + Functions",
+  "description": "AI웹융합 학생 프로젝트 전시관 — Cloudflare Workers + Static Assets",
   "scripts": {
-    "dev": "wrangler pages dev . --port 8788",
-    "deploy": "wrangler pages deploy ."
+    "dev": "wrangler dev --port 8788",
+    "deploy": "wrangler deploy"
   },
   "devDependencies": {
-    "wrangler": "^3.90.0"
+    "wrangler": "^4.87.0"
   }
 }
