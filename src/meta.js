@@ -44,11 +44,15 @@ export async function handleMeta(request) {
   }
 
   try {
+    // same-zone subrequest 우회를 위해 cf 캐시 옵션 제거 + 일반 브라우저 UA 사용
     const upstream = await fetch(parsed.toString(), {
-      cf: { cacheTtl: 120, cacheEverything: true },
-      headers: { 'User-Agent': 'aiweb2026-hub/1.0' },
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (compatible; AIWeb2026Hub/1.0; +https://aiweb2026.site)',
+        'Accept': 'text/html,application/xhtml+xml',
+        'Accept-Language': 'ko,en;q=0.9',
+      },
       redirect: 'follow',
-      signal: AbortSignal.timeout(8000),
+      signal: AbortSignal.timeout(12000),
     });
 
     const html = await upstream.text();
