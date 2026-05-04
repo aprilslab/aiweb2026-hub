@@ -7,7 +7,7 @@
  *   GET /api/meta?url=https://s01.aiweb2026.site
  *
  * 반환:
- *   { ok: true, status: 200, title: "심인규의 포트폴리오" }
+ *   { ok: true, status: 200, title: "심인규의 포트폴리오", description: "..." }
  *   { ok: false, error: "fetch failed" }
  *
  * 배포: index.html과 함께 git에 push하면 Cloudflare Pages가 알아서 배포합니다.
@@ -42,12 +42,22 @@ export async function onRequestGet({ request }) {
     });
 
     const html = await upstream.text();
+
     const titleMatch = html.match(/<title[^>]*>([\s\S]*?)<\/title>/i);
     const rawTitle = titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : null;
     const title = rawTitle ? decodeEntities(rawTitle) : null;
 
+    // og:description > twitter:description > meta[name=description] 순서로 시도
+    const description = extractMeta(html, [
+      /<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:description["']/i,
+      /<meta[^>]+name=["']twitter:description["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]+name=["']description["'][^>]*content=["']([^"']+)["']/i,
+      /<meta[^>]+content=["']([^"']+)["'][^>]*name=["']description["']/i,
+    ]);
+
     return jsonResponse(
-      { ok: upstream.ok, status: upstream.status, title },
+      { ok: upstream.ok, status: upstream.status, title, description },
       200,
       { 'Cache-Control': 'public, max-age=120' }
     );
@@ -82,6 +92,17 @@ function jsonResponse(data, status = 200, extraHeaders = {}) {
       ...extraHeaders,
     },
   });
+}
+
+function extractMeta(html, patterns) {
+  for (const pattern of patterns) {
+    const match = html.match(pattern);
+    if (match && match[1]) {
+      const cleaned = match[1].replace(/\s+/g, ' ').trim();
+      if (cleaned) return decodeEntities(cleaned);
+    }
+  }
+  return null;
 }
 
 function decodeEntities(s) {

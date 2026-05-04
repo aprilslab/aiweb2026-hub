@@ -559,7 +559,7 @@ function renderCards() {
       </div>
       <div class="card-body">
         <div class="card-name">${escapeHtml(slot)}</div>
-        ${s.desc ? `<div class="card-desc">${escapeHtml(s.desc)}</div>` : ''}
+        <div class="card-desc" data-fallback="${escapeHtml(s.desc || '')}">${escapeHtml(s.desc || '')}</div>
       </div>
       <div class="card-foot">
         <span class="card-domain">${escapeHtml(getDomain(s.url))}</span>
@@ -581,26 +581,30 @@ async function fetchMeta(url, timeoutMs = 10000) {
         redirect: 'follow',
         signal: controller.signal,
       });
-      return { ok: true, title: null };
+      return { ok: true, title: null, description: null };
     } catch {
-      return { ok: false, title: null };
+      return { ok: false, title: null, description: null };
     } finally {
       clearTimeout(timer);
     }
   }
 
-  // Worker 프록시를 통해 title까지 추출
+  // Worker 프록시를 통해 title/description까지 추출
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const sep = META_PROXY.includes('?') ? '&' : '?';
     const proxyUrl = `${META_PROXY}${sep}url=${encodeURIComponent(url)}`;
     const res = await fetch(proxyUrl, { signal: controller.signal });
-    if (!res.ok) return { ok: false, title: null };
+    if (!res.ok) return { ok: false, title: null, description: null };
     const data = await res.json();
-    return { ok: !!data.ok, title: data.title || null };
+    return {
+      ok: !!data.ok,
+      title: data.title || null,
+      description: data.description || null,
+    };
   } catch {
-    return { ok: false, title: null };
+    return { ok: false, title: null, description: null };
   } finally {
     clearTimeout(timer);
   }
@@ -637,6 +641,12 @@ async function runChecks() {
       }
     }
 
+    // description이 잡히면 fallback을 실제 meta description으로 교체
+    if (ok && meta.description) {
+      const descEl = card.querySelector('.card-desc');
+      if (descEl) descEl.textContent = meta.description;
+    }
+
     if (ok) {
       live += 1;
     } else {
@@ -669,6 +679,9 @@ function resetCards() {
       nameEl.textContent = getSlot(s.url);
       nameEl.classList.remove('card-name--title');
     }
+    // 설명도 fallback으로 되돌림
+    const descEl = c.querySelector('.card-desc');
+    if (descEl) descEl.textContent = descEl.dataset.fallback || '';
   });
 }
 
