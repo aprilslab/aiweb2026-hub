@@ -24,7 +24,7 @@ const STUDENT_LIST_EXCLUDE = new Set(['example', 'test', 'demo']);
 export const SHEET_ROOT_DOMAIN = ROOT_DOMAIN;
 
 async function getSheetData(ctx) {
-  const cacheKey = new Request('https://cache.local/aiweb2026-hub-sheet-v2');
+  const cacheKey = new Request('https://cache.local/aiweb2026-hub-sheet-v4-include-empty');
   const cache = caches.default;
 
   const cached = await cache.match(cacheKey);
@@ -69,7 +69,7 @@ function parseSheet(csv) {
     const name = cols[0]?.trim();
     const domainFull = cols[1]?.trim();
     const pageLink = cols[2]?.trim();
-    if (!domainFull || !pageLink) continue;
+    if (!domainFull) continue; // Domain 없으면 무효 행
 
     const subdomain = domainFull
       .replace(/^https?:\/\//, '')
@@ -78,12 +78,17 @@ function parseSheet(csv) {
       .trim();
     if (!subdomain) continue;
 
-    let normalizedUrl = pageLink;
-    if (!/^https?:\/\//i.test(normalizedUrl)) {
-      normalizedUrl = 'https://' + normalizedUrl;
+    // Page Link 있는 학생만 mapping에 등록 (없으면 /api/meta는 'slot not registered'를 반환)
+    if (pageLink) {
+      let normalizedUrl = pageLink;
+      if (!/^https?:\/\//i.test(normalizedUrl)) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      }
+      mapping[subdomain] = normalizedUrl;
     }
 
-    mapping[subdomain] = normalizedUrl;
+    // 갤러리 목록에는 Page Link 유무와 무관하게 포함 (등록 안 된 학생은 클라이언트가
+    // fetchMeta 실패 → 자동으로 회색 Offline 처리). EXCLUDE 슬롯만 제외.
     if (!STUDENT_LIST_EXCLUDE.has(subdomain)) {
       students.push({
         slot: subdomain,
