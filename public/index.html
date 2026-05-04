@@ -375,13 +375,6 @@ h1 em {
   flex-shrink: 0;
   opacity: 0.7;
 }
-.card-stat--time {
-  margin-left: auto;
-  font-family: 'JetBrains Mono', ui-monospace, monospace;
-  font-size: 0.7rem;
-  color: var(--ink-muted);
-}
-
 /* ============ Sort control ============ */
 .sort-control {
   display: inline-flex;
@@ -514,7 +507,6 @@ footer {
             <option value="slot">번호순</option>
             <option value="reactions">반응 많은 순</option>
             <option value="comments">댓글 많은 순</option>
-            <option value="pushedAt">최신 push 순</option>
           </select>
         </label>
         <button class="recheck" id="recheckBtn" type="button">
@@ -606,9 +598,6 @@ function renderCards() {
         <span class="card-stat" title="GitHub Discussions 댓글 합계">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
           <span class="card-stat-comments">—</span>
-        </span>
-        <span class="card-stat card-stat--time" title="GitHub repo 최신 push 시간">
-          <span class="card-stat-pushed">—</span>
         </span>
       </div>
       <div class="card-foot">
@@ -737,37 +726,13 @@ async function loadStudents() {
 let STATS = {}; // { s01: { reactions, comments, pushedAt }, ... }
 const sortSelect = document.getElementById('sortSelect');
 
-function formatRelativeTime(iso) {
-  if (!iso) return '—';
-  const ms = Date.now() - new Date(iso).getTime();
-  if (Number.isNaN(ms)) return '—';
-  const min = Math.floor(ms / 60000);
-  if (min < 1) return '방금';
-  if (min < 60) return `${min}분 전`;
-  const h = Math.floor(min / 60);
-  if (h < 24) return `${h}시간 전`;
-  const d = Math.floor(h / 24);
-  if (d < 30) return `${d}일 전`;
-  const mo = Math.floor(d / 30);
-  if (mo < 12) return `${mo}개월 전`;
-  return `${Math.floor(mo / 12)}년 전`;
-}
-
 function applyStatsToCards() {
   document.querySelectorAll('.card-stats').forEach(el => {
     const slot = el.dataset.slot;
     const s = STATS[slot];
-    if (s && s.ok !== false) {
-      el.dataset.loading = 'false';
-      el.querySelector('.card-stat-reactions').textContent = s.reactions ?? 0;
-      el.querySelector('.card-stat-comments').textContent = s.comments ?? 0;
-      el.querySelector('.card-stat-pushed').textContent = formatRelativeTime(s.pushedAt);
-    } else {
-      el.dataset.loading = 'false';
-      el.querySelector('.card-stat-reactions').textContent = '0';
-      el.querySelector('.card-stat-comments').textContent = '0';
-      el.querySelector('.card-stat-pushed').textContent = '—';
-    }
+    el.dataset.loading = 'false';
+    el.querySelector('.card-stat-reactions').textContent = (s && s.ok !== false) ? (s.reactions ?? 0) : 0;
+    el.querySelector('.card-stat-comments').textContent  = (s && s.ok !== false) ? (s.comments  ?? 0) : 0;
   });
 }
 
@@ -793,12 +758,6 @@ function sortStudents(students, key) {
   } else if (key === 'comments') {
     copy.sort((a, b) => (STATS[b.slot]?.comments || 0) - (STATS[a.slot]?.comments || 0)
                        || a.slot.localeCompare(b.slot, 'en', { numeric: true }));
-  } else if (key === 'pushedAt') {
-    copy.sort((a, b) => {
-      const pa = STATS[a.slot]?.pushedAt ? new Date(STATS[a.slot].pushedAt).getTime() : 0;
-      const pb = STATS[b.slot]?.pushedAt ? new Date(STATS[b.slot].pushedAt).getTime() : 0;
-      return pb - pa || a.slot.localeCompare(b.slot, 'en', { numeric: true });
-    });
   } else {
     copy.sort((a, b) => a.slot.localeCompare(b.slot, 'en', { numeric: true }));
   }
