@@ -5,13 +5,19 @@
  *   GET /api/meta?url=https://s01.aiweb2026.site
  *
  * 반환:
- *   { ok: true, status: 200, title: "심인규의 포트폴리오", description: "..." }
+ *   { ok: true, status: 200, title: "심인규의 포트폴리오", description: "...", origin: "..." }
  *   { ok: false, error: "fetch failed" }
+ *
+ * 같은 zone(*.aiweb2026.site) 학생 페이지로 직접 fetch하면 cross-Worker
+ * subrequest 차단(522)에 걸리므로, 시트 매핑에서 진짜 외부 origin URL을
+ * 찾아 그걸 fetch한다.
  */
 
-const ALLOWED = /(^|\.)aiweb2026\.site$|\.pages\.dev$|\.workers\.dev$/i;
+import { getMapping, SHEET_ROOT_DOMAIN } from "./sheet.js";
 
-export async function handleMeta(request) {
+const ALLOWED_FALLBACK = /\.pages\.dev$|\.workers\.dev$/i;
+
+export async function handleMeta(request, ctx) {
   if (request.method === 'OPTIONS') {
     return new Response(null, {
       headers: {
@@ -26,10 +32,7 @@ export async function handleMeta(request) {
   }
 
   const target = new URL(request.url).searchParams.get('url');
-
-  if (!target) {
-    return jsonResponse({ error: 'missing url' }, 400);
-  }
+  if (!target) return jsonResponse({ error: 'missing url' }, 400);
 
   let parsed;
   try {
@@ -38,14 +41,40 @@ export async function handleMeta(request) {
     return jsonResponse({ error: 'invalid url' }, 400);
   }
 
-  // 화이트리스트 — 임의의 외부 사이트 프록시 방지
-  if (!ALLOWED.test(parsed.hostname)) {
+  // 학생 페이지(*.aiweb2026.site)는 시트에서 진짜 origin으로 치환
+  let fetchUrl = parsed.toString();
+  let resolvedOrigin = null;
+
+  if (parsed.hostname.endsWith(`.${SHEET_ROOT_DOMAIN}`)) {
+    const subdomain = parsed.hostname
+      .slice(0, -(SHEET_ROOT_DOMAIN.length + 1))
+      .toLowerCase();
+
+    try {
+      const mapping = await getMapping(ctx);
+      const realOrigin = mapping[subdomain];
+      if (!realOrigin) {
+        return jsonResponse(
+          { ok: false, error: 'slot not registered', slot: subdomain },
+          200,
+          { 'Cache-Control': 'public, max-age=60' }
+        );
+      }
+      fetchUrl = realOrigin;
+      resolvedOrigin = realOrigin;
+    } catch (err) {
+      return jsonResponse(
+        { ok: false, error: 'sheet fetch failed', detail: err.message },
+        200,
+        { 'Cache-Control': 'public, max-age=30' }
+      );
+    }
+  } else if (!ALLOWED_FALLBACK.test(parsed.hostname)) {
     return jsonResponse({ error: 'host not allowed' }, 403);
   }
 
   try {
-    // same-zone subrequest 우회를 위해 cf 캐시 옵션 제거 + 일반 브라우저 UA 사용
-    const upstream = await fetch(parsed.toString(), {
+    const upstream = await fetch(fetchUrl, {
       headers: {
         'User-Agent': 'Mozilla/5.0 (compatible; AIWeb2026Hub/1.0; +https://aiweb2026.site)',
         'Accept': 'text/html,application/xhtml+xml',
@@ -61,7 +90,6 @@ export async function handleMeta(request) {
     const rawTitle = titleMatch ? titleMatch[1].replace(/\s+/g, ' ').trim() : null;
     const title = rawTitle ? decodeEntities(rawTitle) : null;
 
-    // og:description > twitter:description > meta[name=description] 순서로 시도
     const description = extractMeta(html, [
       /<meta[^>]+property=["']og:description["'][^>]*content=["']([^"']+)["']/i,
       /<meta[^>]+content=["']([^"']+)["'][^>]*property=["']og:description["']/i,
@@ -71,7 +99,13 @@ export async function handleMeta(request) {
     ]);
 
     return jsonResponse(
-      { ok: upstream.ok, status: upstream.status, title, description },
+      {
+        ok: upstream.ok,
+        status: upstream.status,
+        title,
+        description,
+        origin: resolvedOrigin,
+      },
       200,
       { 'Cache-Control': 'public, max-age=120' }
     );
@@ -80,7 +114,7 @@ export async function handleMeta(request) {
       ? 'timeout'
       : 'fetch failed';
     return jsonResponse(
-      { ok: false, error: reason },
+      { ok: false, error: reason, origin: resolvedOrigin },
       200,
       { 'Cache-Control': 'public, max-age=30' }
     );
