@@ -1,4 +1,5 @@
 import { handleMeta } from "./meta.js";
+import { getStudentList } from "./sheet.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -8,7 +9,37 @@ export default {
       return handleMeta(request, ctx);
     }
 
+    if (url.pathname === "/api/students") {
+      return handleStudents(ctx);
+    }
+
     // 나머지는 정적 자산(public/)으로 위임
     return env.ASSETS.fetch(request);
   },
 };
+
+async function handleStudents(ctx) {
+  try {
+    const students = await getStudentList(ctx);
+    return jsonResponse({ ok: true, students }, 200, {
+      'Cache-Control': 'public, max-age=120',
+    });
+  } catch (err) {
+    return jsonResponse(
+      { ok: false, error: err.message || 'sheet fetch failed' },
+      200,
+      { 'Cache-Control': 'public, max-age=30' }
+    );
+  }
+}
+
+function jsonResponse(data, status = 200, extraHeaders = {}) {
+  return new Response(JSON.stringify(data), {
+    status,
+    headers: {
+      'Content-Type': 'application/json; charset=utf-8',
+      'Access-Control-Allow-Origin': '*',
+      ...extraHeaders,
+    },
+  });
+}

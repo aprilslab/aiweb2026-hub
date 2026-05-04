@@ -479,39 +479,12 @@ footer {
 const META_PROXY = "/api/meta";
 
 // ============================================
-//  학생 데이터 — 여기만 수정하면 됩니다
-//  배정 도메인: sNN.aiweb2026.site
-//  학생 사이트가 아직 배포되지 않았으면 자동으로 회색 비활성 처리됩니다
+//  학생 데이터는 /api/students 에서 동적으로 로드 (Google Sheet 기반)
+//  → 시트에 행만 추가하면 갤러리에 자동 등장. 소스 수정 불필요.
+//  → 마지막 성공 응답은 localStorage에 캐시 (시트 일시 다운 대비)
 // ============================================
-const STUDENTS = [
-  { name: "심인규", url: "https://s01.aiweb2026.site" },
-  { name: "구동빈", url: "https://s02.aiweb2026.site" },
-  { name: "김민결", url: "https://s03.aiweb2026.site" },
-  { name: "오승은", url: "https://s04.aiweb2026.site" },
-  { name: "정서현", url: "https://s05.aiweb2026.site" },
-  { name: "김범준", url: "https://s06.aiweb2026.site" },
-  { name: "한정연", url: "https://s07.aiweb2026.site" },
-  { name: "김수정", url: "https://s08.aiweb2026.site" },
-  { name: "김유진", url: "https://s09.aiweb2026.site" },
-  { name: "이문규", url: "https://s10.aiweb2026.site" },
-  { name: "최영우", url: "https://s11.aiweb2026.site" },
-  { name: "차성준", url: "https://s12.aiweb2026.site" },
-  { name: "심기준", url: "https://s13.aiweb2026.site" },
-  { name: "윤준영", url: "https://s14.aiweb2026.site" },
-  { name: "이유민", url: "https://s15.aiweb2026.site" },
-  { name: "전종찬", url: "https://s16.aiweb2026.site" },
-  { name: "여민영", url: "https://s17.aiweb2026.site" },
-  { name: "유휘경", url: "https://s18.aiweb2026.site" },
-  { name: "박희태", url: "https://s19.aiweb2026.site" },
-  { name: "박성현", url: "https://s20.aiweb2026.site" },
-  { name: "백송희", url: "https://s21.aiweb2026.site" },
-  { name: "김형중", url: "https://s22.aiweb2026.site" },
-  { name: "김수진", url: "https://s23.aiweb2026.site" },
-  { name: "전성민", url: "https://s24.aiweb2026.site" },
-  { name: "이정수", url: "https://s25.aiweb2026.site" },
-  { name: "김지우", url: "https://s26.aiweb2026.site" },
-  { name: "채혜원", url: "https://s27.aiweb2026.site" },
-];
+const STUDENTS_CACHE_KEY = 'aiweb2026-students-v1';
+let STUDENTS = [];
 // ============================================
 
 const grid = document.getElementById('grid');
@@ -660,11 +633,36 @@ async function runChecks() {
   });
 }
 
+// 시트에서 학생 목록 로드 → 실패 시 localStorage 캐시 → 둘 다 없으면 빈 갤러리
+async function loadStudents() {
+  try {
+    const res = await fetch('/api/students', { cache: 'no-store' });
+    if (res.ok) {
+      const data = await res.json();
+      if (data.ok && Array.isArray(data.students) && data.students.length > 0) {
+        STUDENTS = data.students;
+        try { localStorage.setItem(STUDENTS_CACHE_KEY, JSON.stringify(data.students)); } catch {}
+        return;
+      }
+    }
+  } catch {}
+  // fallback — 마지막 성공 응답 재사용
+  try {
+    const cached = localStorage.getItem(STUDENTS_CACHE_KEY);
+    if (cached) STUDENTS = JSON.parse(cached);
+  } catch {}
+}
+
 // 초기화
-renderCards();
-totalEl.textContent = STUDENTS.length;
-subTitleEl.textContent = `${STUDENTS.length}개`;
-runChecks();
+(async () => {
+  totalEl.textContent = '…';
+  subTitleEl.textContent = '로딩 중';
+  await loadStudents();
+  totalEl.textContent = STUDENTS.length;
+  subTitleEl.textContent = `${STUDENTS.length}개`;
+  renderCards();
+  runChecks();
+})();
 
 function resetCards() {
   document.querySelectorAll('.card').forEach((c, i) => {
