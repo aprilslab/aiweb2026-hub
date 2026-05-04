@@ -351,6 +351,62 @@ h1 em {
   white-space: nowrap;
   letter-spacing: -0.01em;
 }
+
+/* ============ Stat badges ============ */
+.card-stats {
+  display: flex;
+  align-items: center;
+  gap: 0.875rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+.card-stats[data-loading="true"] { opacity: 0.4; }
+.card-stat {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  white-space: nowrap;
+}
+.card-stat svg {
+  width: 12px;
+  height: 12px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+.card-stat--time {
+  margin-left: auto;
+  font-family: 'JetBrains Mono', ui-monospace, monospace;
+  font-size: 0.7rem;
+  color: var(--ink-muted);
+}
+
+/* ============ Sort control ============ */
+.sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8125rem;
+  color: var(--ink-soft);
+}
+.sort-control select {
+  font-family: inherit;
+  font-size: inherit;
+  background: none;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 0.4rem 1.75rem 0.4rem 0.875rem;
+  color: var(--ink);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10' fill='none' stroke='currentColor' stroke-width='1.6'><path d='M2 4l3 3 3-3'/></svg>");
+  background-repeat: no-repeat;
+  background-position: right 0.625rem center;
+  transition: border-color 0.2s, color 0.2s;
+}
+.sort-control select:hover { border-color: var(--accent); color: var(--accent); }
+.sort-control select:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .card-arrow {
   color: var(--ink-muted);
   transition: transform 0.3s, color 0.3s;
@@ -452,6 +508,15 @@ footer {
           <span class="legend-item"><span class="legend-dot" style="background: var(--live)"></span>접속 가능</span>
           <span class="legend-item"><span class="legend-dot" style="background: var(--down)"></span>오프라인</span>
         </div>
+        <label class="sort-control">
+          정렬
+          <select id="sortSelect">
+            <option value="slot">번호순</option>
+            <option value="reactions">반응 많은 순</option>
+            <option value="comments">댓글 많은 순</option>
+            <option value="pushedAt">최신 push 순</option>
+          </select>
+        </label>
         <button class="recheck" id="recheckBtn" type="button">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M3 21v-5h5"/></svg>
           다시 확인
@@ -532,6 +597,19 @@ function renderCards() {
       <div class="card-body">
         <div class="card-name">${escapeHtml(slot)}</div>
         <div class="card-desc" data-fallback="${escapeHtml(s.desc || '')}">${escapeHtml(s.desc || '')}</div>
+      </div>
+      <div class="card-stats" data-loading="true" data-slot="${escapeHtml(slot)}">
+        <span class="card-stat" title="GitHub Discussions 반응 합계">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+          <span class="card-stat-reactions">—</span>
+        </span>
+        <span class="card-stat" title="GitHub Discussions 댓글 합계">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+          <span class="card-stat-comments">—</span>
+        </span>
+        <span class="card-stat card-stat--time" title="GitHub repo 최신 push 시간">
+          <span class="card-stat-pushed">—</span>
+        </span>
       </div>
       <div class="card-foot">
         <span class="card-domain">${escapeHtml(getDomain(s.url))}</span>
@@ -653,20 +731,130 @@ async function loadStudents() {
   } catch {}
 }
 
+// ============================================
+//  GitHub stats (giscus 반응/댓글, repo pushed_at) — /api/stats
+// ============================================
+let STATS = {}; // { s01: { reactions, comments, pushedAt }, ... }
+const sortSelect = document.getElementById('sortSelect');
+
+function formatRelativeTime(iso) {
+  if (!iso) return '—';
+  const ms = Date.now() - new Date(iso).getTime();
+  if (Number.isNaN(ms)) return '—';
+  const min = Math.floor(ms / 60000);
+  if (min < 1) return '방금';
+  if (min < 60) return `${min}분 전`;
+  const h = Math.floor(min / 60);
+  if (h < 24) return `${h}시간 전`;
+  const d = Math.floor(h / 24);
+  if (d < 30) return `${d}일 전`;
+  const mo = Math.floor(d / 30);
+  if (mo < 12) return `${mo}개월 전`;
+  return `${Math.floor(mo / 12)}년 전`;
+}
+
+function applyStatsToCards() {
+  document.querySelectorAll('.card-stats').forEach(el => {
+    const slot = el.dataset.slot;
+    const s = STATS[slot];
+    if (s && s.ok !== false) {
+      el.dataset.loading = 'false';
+      el.querySelector('.card-stat-reactions').textContent = s.reactions ?? 0;
+      el.querySelector('.card-stat-comments').textContent = s.comments ?? 0;
+      el.querySelector('.card-stat-pushed').textContent = formatRelativeTime(s.pushedAt);
+    } else {
+      el.dataset.loading = 'false';
+      el.querySelector('.card-stat-reactions').textContent = '0';
+      el.querySelector('.card-stat-comments').textContent = '0';
+      el.querySelector('.card-stat-pushed').textContent = '—';
+    }
+  });
+}
+
+async function loadStats() {
+  try {
+    const res = await fetch('/api/stats', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.stats) {
+      STATS = data.stats;
+      applyStatsToCards();
+      // 현재 sort가 stats 기반이면 재정렬
+      if (sortSelect.value !== 'slot') sortAndRender();
+    }
+  } catch {}
+}
+
+function sortStudents(students, key) {
+  const copy = students.slice();
+  if (key === 'reactions') {
+    copy.sort((a, b) => (STATS[b.slot]?.reactions || 0) - (STATS[a.slot]?.reactions || 0)
+                       || a.slot.localeCompare(b.slot, 'en', { numeric: true }));
+  } else if (key === 'comments') {
+    copy.sort((a, b) => (STATS[b.slot]?.comments || 0) - (STATS[a.slot]?.comments || 0)
+                       || a.slot.localeCompare(b.slot, 'en', { numeric: true }));
+  } else if (key === 'pushedAt') {
+    copy.sort((a, b) => {
+      const pa = STATS[a.slot]?.pushedAt ? new Date(STATS[a.slot].pushedAt).getTime() : 0;
+      const pb = STATS[b.slot]?.pushedAt ? new Date(STATS[b.slot].pushedAt).getTime() : 0;
+      return pb - pa || a.slot.localeCompare(b.slot, 'en', { numeric: true });
+    });
+  } else {
+    copy.sort((a, b) => a.slot.localeCompare(b.slot, 'en', { numeric: true }));
+  }
+  return copy;
+}
+
+// 카드를 현재 sort 기준으로 다시 그림. meta(title/description)와 status는
+// 카드 DOM에 남아있는 값을 보존하면서 순서만 바꿈.
+function sortAndRender() {
+  const sorted = sortStudents(STUDENTS, sortSelect.value);
+  // 현재 카드 DOM을 slot으로 인덱싱
+  const cardBySlot = {};
+  document.querySelectorAll('.card').forEach(c => {
+    const slot = c.dataset.url ? getSlot(c.dataset.url) : '';
+    if (slot) cardBySlot[slot] = c;
+  });
+  // 원래 카드가 없으면 새로 그림 (초기 렌더 또는 학생 목록 변경 시)
+  const allPresent = sorted.every(s => cardBySlot[s.slot]);
+  if (!allPresent) {
+    STUDENTS = sorted;
+    renderCards();
+    applyStatsToCards();
+    return;
+  }
+  // 있으면 기존 노드를 새 순서로 다시 append
+  STUDENTS = sorted;
+  sorted.forEach((s, i) => {
+    const card = cardBySlot[s.slot];
+    grid.appendChild(card);
+    // 번호 라벨도 새 순서로 갱신
+    const num = card.querySelector('.card-num');
+    if (num) num.textContent = `${String(i + 1).padStart(2, '0')} / ${String(sorted.length).padStart(2, '0')}`;
+  });
+}
+
+sortSelect.addEventListener('change', sortAndRender);
+
 // 초기화
 (async () => {
   totalEl.textContent = '…';
   subTitleEl.textContent = '로딩 중';
   await loadStudents();
+  // 처음엔 항상 번호순으로 렌더
+  STUDENTS = sortStudents(STUDENTS, 'slot');
   totalEl.textContent = STUDENTS.length;
   subTitleEl.textContent = `${STUDENTS.length}개`;
   renderCards();
+  // meta(라이브 체크 + title/desc)와 stats는 병렬로 로드
   runChecks();
+  loadStats();
 })();
 
 function resetCards() {
-  document.querySelectorAll('.card').forEach((c, i) => {
-    const s = STUDENTS[i];
+  document.querySelectorAll('.card').forEach(c => {
+    const slot = c.dataset.url ? getSlot(c.dataset.url) : '';
+    const s = STUDENTS.find(x => x.slot === slot);
     if (!s) return;
     c.setAttribute('href', s.url);
     c.removeAttribute('aria-disabled');
@@ -682,16 +870,18 @@ function resetCards() {
   });
 }
 
-// 버튼: 다시 확인
+// 버튼: 다시 확인 — meta + stats 모두 갱신
 recheckBtn.addEventListener('click', () => {
   resetCards();
   runChecks();
+  loadStats();
 });
 
 // 5분마다 자동 재확인
 setInterval(() => {
   resetCards();
   runChecks();
+  loadStats();
 }, 5 * 60 * 1000);
 </script>
 

@@ -1,5 +1,6 @@
 import { handleMeta } from "./meta.js";
 import { getStudentList } from "./sheet.js";
+import { getStats } from "./stats.js";
 
 export default {
   async fetch(request, env, ctx) {
@@ -11,6 +12,10 @@ export default {
 
     if (url.pathname === "/api/students") {
       return handleStudents(ctx);
+    }
+
+    if (url.pathname === "/api/stats") {
+      return handleStats(ctx, env);
     }
 
     // 나머지는 정적 자산(public/)으로 위임
@@ -27,6 +32,21 @@ async function handleStudents(ctx) {
   } catch (err) {
     return jsonResponse(
       { ok: false, error: err.message || 'sheet fetch failed' },
+      200,
+      { 'Cache-Control': 'public, max-age=30' }
+    );
+  }
+}
+
+async function handleStats(ctx, env) {
+  try {
+    const result = await getStats(ctx, env);
+    return jsonResponse(result, 200, {
+      'Cache-Control': 'public, max-age=300',
+    });
+  } catch (err) {
+    return jsonResponse(
+      { ok: false, error: err.message || 'stats failed', stats: {} },
       200,
       { 'Cache-Control': 'public, max-age=30' }
     );
