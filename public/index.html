@@ -308,23 +308,6 @@ h1 em {
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
 
-/* 순위 메달 (득표 1~3위) */
-.card-head-left {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-.card-medal {
-  font-size: 1.35rem;
-  line-height: 1;
-  filter: drop-shadow(0 1px 2px oklch(0% 0 0 / 0.3));
-}
-.card-medal:empty { display: none; }
-.card[data-rank="1"] .card-medal { font-size: 1.6rem; }
-/* 1위 카드는 살짝 키워 시선 집중 */
-.card[data-rank="1"] { transform: scale(1.02); }
-.card[data-rank="1"]:hover { transform: translateY(-4px) scale(1.02); }
-
 .status {
   display: inline-flex;
   align-items: center;
@@ -652,10 +635,7 @@ function renderCards() {
        title="${escapeHtml(s.name)}"
        aria-busy="true">
       <div class="card-header">
-        <span class="card-head-left">
-          <span class="card-medal" aria-hidden="true"></span>
-          <span class="card-num">${String(i + 1).padStart(2, '0')} / ${String(STUDENTS.length).padStart(2, '0')}</span>
-        </span>
+        <span class="card-num">${String(i + 1).padStart(2, '0')} / ${String(STUDENTS.length).padStart(2, '0')}</span>
         <span class="status">
           <span class="status-dot" aria-hidden="true"></span>
           <span class="status-text">확인 중</span>
@@ -812,17 +792,6 @@ const sortSelect = document.getElementById('sortSelect');
 
 // 득표 수를 카드에 반영: 배지 텍스트 + --heat(glow 세기) + data-votes
 function applyVotesToCards() {
-  // 득표 1~3위 → 메달 슬롯 계산
-  const ranked = Object.entries(VOTES)
-    .filter(([, v]) => v > 0)
-    .sort((a, b) => b[1] - a[1]);
-  const MEDALS = ['🥇', '🥈', '🥉'];
-  const medalBySlot = {}, rankBySlot = {};
-  ranked.slice(0, 3).forEach(([slot], i) => {
-    medalBySlot[slot] = MEDALS[i];
-    rankBySlot[slot] = i + 1;
-  });
-
   document.querySelectorAll('.card').forEach(card => {
     const slot = card.dataset.url ? getSlot(card.dataset.url) : '';
     const v = VOTES[slot] || 0;
@@ -841,12 +810,6 @@ function applyVotesToCards() {
         box.appendChild(s);
       }
     }
-
-    // 순위 메달
-    const medal = card.querySelector('.card-medal');
-    if (medal) medal.textContent = medalBySlot[slot] || '';
-    if (rankBySlot[slot]) card.dataset.rank = rankBySlot[slot];
-    else card.removeAttribute('data-rank');
   });
 }
 
