@@ -104,7 +104,7 @@ function parseSheet(csv) {
   return { mapping, students };
 }
 
-function parseCSVLine(line) {
+export function parseCSVLine(line) {
   const result = [];
   let current = '';
   let inQuotes = false;

@@ -195,6 +195,7 @@ h1 em {
 
 /* ============ Card ============ */
 .card {
+  --heat: 0; /* 0~1 정규화된 득표 비율 (heatmap) */
   position: relative;
   background: var(--surface);
   border: 1px solid var(--rule);
@@ -208,10 +209,55 @@ h1 em {
   transition:
     transform 0.4s cubic-bezier(0.16, 1, 0.3, 1),
     border-color 0.3s,
-    box-shadow 0.3s;
+    box-shadow 0.5s ease;
   isolation: isolate;
   overflow: hidden;
   min-height: 200px;
+}
+/* 득표 스티커 — 득표 수만큼 "참 잘했어요" 빨강 도장이 붙음 */
+.card-stickers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem;
+}
+.card-stickers:empty { display: none; }
+.sticker {
+  position: relative;
+  font-size: 1.3rem;
+  line-height: 1;
+  display: inline-block;
+  filter: drop-shadow(0 1px 1.5px oklch(0% 0 0 / 0.25));
+  cursor: default;
+  user-select: none;
+}
+.sticker::after {
+  content: '✦'; /* 한 개짜리 반짝이 */
+  position: absolute;
+  top: -0.4em;
+  right: -0.35em;
+  font-size: 0.66em;
+  color: oklch(85% 0.17 90); /* 금빛 */
+  opacity: 0;
+  pointer-events: none;
+}
+/* 카드 hover 시 따봉 개수만큼 순차(stagger)로 통 커지며 그때 ✦ 1회 반짝 */
+.card:hover .sticker {
+  animation: sticker-pop 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: calc(var(--i, 0) * 0.06s);
+}
+.card:hover .sticker::after {
+  animation: sticker-twinkle 0.5s ease both;
+  animation-delay: calc(var(--i, 0) * 0.06s);
+}
+@keyframes sticker-pop {
+  0%   { transform: scale(1); }
+  45%  { transform: scale(1.4); }
+  100% { transform: scale(1); }
+}
+@keyframes sticker-twinkle {
+  0%   { opacity: 0; transform: scale(0.2) rotate(0deg); }
+  50%  { opacity: 1; transform: scale(1.1) rotate(18deg); }
+  100% { opacity: 0; transform: scale(0.7) rotate(32deg); }
 }
 
 .card::after {
@@ -261,6 +307,23 @@ h1 em {
   font-weight: 600;
   font-family: 'JetBrains Mono', ui-monospace, monospace;
 }
+
+/* 순위 메달 (득표 1~3위) */
+.card-head-left {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.card-medal {
+  font-size: 1.35rem;
+  line-height: 1;
+  filter: drop-shadow(0 1px 2px oklch(0% 0 0 / 0.3));
+}
+.card-medal:empty { display: none; }
+.card[data-rank="1"] .card-medal { font-size: 1.6rem; }
+/* 1위 카드는 살짝 키워 시선 집중 */
+.card[data-rank="1"] { transform: scale(1.02); }
+.card[data-rank="1"]:hover { transform: translateY(-4px) scale(1.02); }
 
 .status {
   display: inline-flex;
@@ -375,6 +438,13 @@ h1 em {
   flex-shrink: 0;
   opacity: 0.7;
 }
+/* 득표 배지 — heatmap glow와 톤 맞춘 warm amber, 표 있으면 강조 */
+.card-stat--votes {
+  color: oklch(62% 0.2 55);
+  font-weight: 700;
+}
+.card-stat--votes svg { fill: currentColor; opacity: 1; }
+.card[data-votes="0"] .card-stat--votes { color: var(--ink-muted); font-weight: 500; }
 /* ============ Sort control ============ */
 .sort-control {
   display: inline-flex;
@@ -500,11 +570,13 @@ footer {
         <div class="legend">
           <span class="legend-item"><span class="legend-dot" style="background: var(--live)"></span>접속 가능</span>
           <span class="legend-item"><span class="legend-dot" style="background: var(--down)"></span>오프라인</span>
+          <span class="legend-item"><span style="font-size:0.95rem">👍</span>= 득표 1개</span>
         </div>
         <label class="sort-control">
           정렬
           <select id="sortSelect">
             <option value="slot">번호순</option>
+            <option value="votes">득표 많은 순</option>
             <option value="reactions">반응 많은 순</option>
             <option value="comments">댓글 많은 순</option>
           </select>
@@ -580,7 +652,10 @@ function renderCards() {
        title="${escapeHtml(s.name)}"
        aria-busy="true">
       <div class="card-header">
-        <span class="card-num">${String(i + 1).padStart(2, '0')} / ${String(STUDENTS.length).padStart(2, '0')}</span>
+        <span class="card-head-left">
+          <span class="card-medal" aria-hidden="true"></span>
+          <span class="card-num">${String(i + 1).padStart(2, '0')} / ${String(STUDENTS.length).padStart(2, '0')}</span>
+        </span>
         <span class="status">
           <span class="status-dot" aria-hidden="true"></span>
           <span class="status-text">확인 중</span>
@@ -590,7 +665,12 @@ function renderCards() {
         <div class="card-name">${escapeHtml(slot)}</div>
         <div class="card-desc" data-fallback="${escapeHtml(s.desc || '')}">${escapeHtml(s.desc || '')}</div>
       </div>
+      <div class="card-stickers" aria-hidden="true"></div>
       <div class="card-stats" data-loading="true" data-slot="${escapeHtml(slot)}">
+        <span class="card-stat card-stat--votes" title="기말 투표 득표 수">
+          <svg viewBox="0 0 24 24" stroke="none"><path d="M12 2l2.9 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l7.1-1.01L12 2z"/></svg>
+          <span class="card-stat-votes">—</span>
+        </span>
         <span class="card-stat" title="GitHub Discussions 반응 합계">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
           <span class="card-stat-reactions">—</span>
@@ -724,7 +804,65 @@ async function loadStudents() {
 //  GitHub stats (giscus 반응/댓글, repo pushed_at) — /api/stats
 // ============================================
 let STATS = {}; // { s01: { reactions, comments, pushedAt }, ... }
+let VOTES = {};     // { s19: 3, s21: 1, ... } — 슬롯별 기말 투표 득표 수
+let MAXVOTES = 0;   // 최다 득표
+// 득표 스티커 — 득표 1개당 1개. 종류 통일(따봉).
+const STICKER = '👍';
 const sortSelect = document.getElementById('sortSelect');
+
+// 득표 수를 카드에 반영: 배지 텍스트 + --heat(glow 세기) + data-votes
+function applyVotesToCards() {
+  // 득표 1~3위 → 메달 슬롯 계산
+  const ranked = Object.entries(VOTES)
+    .filter(([, v]) => v > 0)
+    .sort((a, b) => b[1] - a[1]);
+  const MEDALS = ['🥇', '🥈', '🥉'];
+  const medalBySlot = {}, rankBySlot = {};
+  ranked.slice(0, 3).forEach(([slot], i) => {
+    medalBySlot[slot] = MEDALS[i];
+    rankBySlot[slot] = i + 1;
+  });
+
+  document.querySelectorAll('.card').forEach(card => {
+    const slot = card.dataset.url ? getSlot(card.dataset.url) : '';
+    const v = VOTES[slot] || 0;
+    const badge = card.querySelector('.card-stat-votes');
+    if (badge) badge.textContent = v;
+    card.dataset.votes = v;
+    // 득표 수만큼 따봉 스티커
+    const box = card.querySelector('.card-stickers');
+    if (box) {
+      box.innerHTML = '';
+      for (let k = 0; k < v; k++) {
+        const s = document.createElement('span');
+        s.className = 'sticker';
+        s.textContent = STICKER;
+        s.style.setProperty('--i', k); // hover 반짝이 stagger 순번
+        box.appendChild(s);
+      }
+    }
+
+    // 순위 메달
+    const medal = card.querySelector('.card-medal');
+    if (medal) medal.textContent = medalBySlot[slot] || '';
+    if (rankBySlot[slot]) card.dataset.rank = rankBySlot[slot];
+    else card.removeAttribute('data-rank');
+  });
+}
+
+async function loadVotes() {
+  try {
+    const res = await fetch('/api/votes', { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = await res.json();
+    if (data && data.votes) {
+      VOTES = data.votes;
+      MAXVOTES = data.maxVotes || 0;
+      applyVotesToCards();
+      if (sortSelect.value === 'votes') sortAndRender();
+    }
+  } catch {}
+}
 
 function applyStatsToCards() {
   document.querySelectorAll('.card-stats').forEach(el => {
@@ -752,7 +890,10 @@ async function loadStats() {
 
 function sortStudents(students, key) {
   const copy = students.slice();
-  if (key === 'reactions') {
+  if (key === 'votes') {
+    copy.sort((a, b) => (VOTES[b.slot] || 0) - (VOTES[a.slot] || 0)
+                       || a.slot.localeCompare(b.slot, 'en', { numeric: true }));
+  } else if (key === 'reactions') {
     copy.sort((a, b) => (STATS[b.slot]?.reactions || 0) - (STATS[a.slot]?.reactions || 0)
                        || a.slot.localeCompare(b.slot, 'en', { numeric: true }));
   } else if (key === 'comments') {
@@ -780,6 +921,7 @@ function sortAndRender() {
     STUDENTS = sorted;
     renderCards();
     applyStatsToCards();
+    applyVotesToCards();
     return;
   }
   // 있으면 기존 노드를 새 순서로 다시 append
@@ -805,9 +947,10 @@ sortSelect.addEventListener('change', sortAndRender);
   totalEl.textContent = STUDENTS.length;
   subTitleEl.textContent = `${STUDENTS.length}개`;
   renderCards();
-  // meta(라이브 체크 + title/desc)와 stats는 병렬로 로드
+  // meta(라이브 체크 + title/desc), stats, votes 병렬 로드
   runChecks();
   loadStats();
+  loadVotes();
 })();
 
 function resetCards() {
@@ -834,6 +977,7 @@ recheckBtn.addEventListener('click', () => {
   resetCards();
   runChecks();
   loadStats();
+  loadVotes();
 });
 
 // 5분마다 자동 재확인
@@ -841,6 +985,7 @@ setInterval(() => {
   resetCards();
   runChecks();
   loadStats();
+  loadVotes();
 }, 5 * 60 * 1000);
 </script>
 
