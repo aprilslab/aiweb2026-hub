@@ -22,12 +22,9 @@ const CACHE_TTL = 300; // 5분
 const SELECTION_COL = 4; // E열 (0-based)
 
 export async function getVotes(ctx) {
-  const cacheKey = new Request('https://cache.local/aiweb2026-hub-votes-v1');
-  const cache = caches.default;
-
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached.json();
-
+  // 내부 캐시 없음 — 엣지 캐시(/api/votes Cache-Control)가 트래픽 방어,
+  // 폼 제출 시 Apps Script가 Cloudflare API로 그 엣지 캐시를 즉시 퍼지함.
+  // (내부 caches.default를 쓰면 엣지 퍼지해도 옛 값 반환 → 퍼지 무력화)
   const csvUrl =
     `https://docs.google.com/spreadsheets/d/${FORM_SHEET_ID}/gviz/tq` +
     `?tqx=out:csv&sheet=${encodeURIComponent(FORM_SHEET_NAME)}`;
@@ -35,14 +32,7 @@ export async function getVotes(ctx) {
   if (!res.ok) throw new Error(`votes sheet fetch failed: ${res.status}`);
 
   const csv = await res.text();
-  const result = tally(csv);
-
-  const cacheResponse = new Response(JSON.stringify(result), {
-    headers: { 'Cache-Control': `max-age=${CACHE_TTL}` },
-  });
-  if (ctx?.waitUntil) ctx.waitUntil(cache.put(cacheKey, cacheResponse));
-
-  return result;
+  return tally(csv);
 }
 
 function tally(csv) {

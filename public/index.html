@@ -943,13 +943,16 @@ recheckBtn.addEventListener('click', () => {
   loadVotes();
 });
 
-// 5분마다 자동 재확인
+// 5분마다 자동 재확인 (무거운 liveness + meta + stats)
 setInterval(() => {
   resetCards();
   runChecks();
   loadStats();
   loadVotes();
 }, 5 * 60 * 1000);
+
+// 득표(따봉)는 가볍게 30초마다 갱신 — 열린 탭도 거의 실시간 반영
+setInterval(loadVotes, 30 * 1000);
 </script>
 
 </body>

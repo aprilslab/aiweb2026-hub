@@ -61,8 +61,10 @@ async function handleStats(ctx, env) {
 async function handleVotes(ctx) {
   try {
     const result = await getVotes(ctx);
+    // 짧은 엣지 캐시(20s) — 새 응답이 거의 바로 반영되게.
+    // stale-while-revalidate: 만료돼도 즉시 옛값 주고 백그라운드 갱신 → 항상 빠름.
     return jsonResponse(result, 200, {
-      'Cache-Control': 'public, max-age=300',
+      'Cache-Control': 'public, max-age=20, stale-while-revalidate=40',
     });
   } catch (err) {
     return jsonResponse(
