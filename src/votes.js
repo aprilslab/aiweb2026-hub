@@ -19,7 +19,8 @@ import { parseCSVLine } from "./sheet.js";
 const FORM_SHEET_ID = '1sMmRTuiFsgMtaB8GuJz2itNJMnXCM-taNdo8WH_nYfE';
 const FORM_SHEET_NAME = 'Form_Responses';
 const CACHE_TTL = 300; // 5분
-const SELECTION_COL = 4; // E열 (0-based)
+const SELF_ID_COL = 3;   // D열 본인 아이디 (0-based)
+const SELECTION_COL = 4; // E열 투표 작품 (0-based)
 
 export async function getVotes(ctx) {
   // 내부 캐시 없음 — 엣지 캐시(/api/votes Cache-Control)가 트래픽 방어,
@@ -47,12 +48,14 @@ function tally(csv) {
     if (!selection) continue;
 
     responses += 1;
+    // 본인 아이디 — 자기 자신 투표는 제외
+    const selfId = cols[SELF_ID_COL]?.trim().toLowerCase();
     // "s19, s21, s22" → ["s19","s21","s22"]. 쉼표/공백 구분.
     for (const token of selection.split(/[,\s]+/)) {
       const slot = token.trim().toLowerCase();
-      if (/^s\d+$/.test(slot)) {
-        votes[slot] = (votes[slot] || 0) + 1;
-      }
+      if (!/^s\d+$/.test(slot)) continue;
+      if (slot === selfId) continue; // 본인 아이디와 같으면 제외
+      votes[slot] = (votes[slot] || 0) + 1;
     }
   }
 
